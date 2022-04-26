@@ -2,9 +2,21 @@ from selenium import webdriver
 from selenium.common.exceptions import SessionNotCreatedException
 from selenium.common.exceptions import NoSuchElementException
 from sys import exit
+import configparser
 import time
 import pickle
+import requests
 
+config = configparser.ConfigParser()
+config.read("settings.ini")
+
+
+
+token = config["Settings"]["TGtoken"]
+chat_id = config["Settings"]["ChatID"]
+def sendTelegram(message):
+    url = f'https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={message}'
+    requests.get(url)
 
 def UpdateChromeDriver():
     chromeVersion = SessionNotCreated[SessionNotCreated.find('Current browser version is'):SessionNotCreated.find('with binary')]
@@ -43,28 +55,28 @@ def firstStart(array):
     
 def raiseOrder(flag):
     if check_exist_by_css('.tc-item.warning') and flag:
-        print('вошли')
         autoActivateOrderFunction()
+    elif check_exist_by_css('.tc-item.warning') and not flag:
+        sendTelegram('Какой-то лот не активен. Я не могу его поднять потому что функция выключена.')
     driver.find_element_by_xpath("//button[contains(text(),'Поднять предложения')]").click()
-    #{!} не рассмотрен случай когда нажимается кнопка только на 1 товар(без списка то есть)
-    if not check_exist_by_xpath("//div[@class='ajax-alert ajax-alert-danger']"):
-        rid = 0
-        while True:
-            rid += 1
-            try:
-                if not driver.find_element_by_xpath(f"/html/body/div[2]/div/div/div[2]/div/div[{rid}]/label/input").is_selected():
-                    driver.find_element_by_xpath(f"/html/body/div[2]/div/div/div[2]/div/div[{rid}]/label").click()
-            except Exception:
-                break
-        driver.find_element_by_xpath(f"//button[@class='btn btn-primary btn-block js-lot-raise-ex']").click()
-    return 0
+    if check_exist_by_xpath("//div[@class='modal-content']"):
+        if not check_exist_by_xpath("//div[@class='ajax-alert ajax-alert-danger']"):
+            rid = 0
+            while True:
+                rid += 1
+                try:
+                    if not driver.find_element_by_xpath(f"/html/body/div[2]/div/div/div[2]/div/div[{rid}]/label/input").is_selected():
+                        driver.find_element_by_xpath(f"/html/body/div[2]/div/div/div[2]/div/div[{rid}]/label").click()
+                except Exception:
+                    break
+            driver.find_element_by_xpath(f"//button[@class='btn btn-primary btn-block js-lot-raise-ex']").click()
     
 def main():
     print('FunPay Assistant by MRossa')
     #delay = int(input('[FPA] Введите вашу задержку (в минутах)')) # отголоски интерфейса
-    delay = 10 * 60 # стандарт 10 минут
-    autoActivateOrder = True
-    FirtsStartFlag = True
+    delay = int(config["Settings"]["delay"])
+    autoActivateOrder  = bool(config["Settings"]["autoActivateOrder"])
+    FirtsStartFlag  = bool(config["Settings"]["firtsStartFlag"])
     links = []
     driver.implicitly_wait(2)
     try:  
@@ -95,16 +107,17 @@ def main():
                 driver.get(url)
                 raiseOrder(autoActivateOrder)
             pickle.dump(driver.get_cookies(), open('cookie', 'wb')) # сохранение куки
-            print(f'[FPA] Жду {delay//60} минут (Всего работаю: {timer_string})')
-            time.sleep(delay)
-            timer_min += delay // 60
+            print(f'[FPA] Жду {delay} минут (Всего работаю: {timer_string})')
+            time.sleep(delay*60)
+            timer_min += delay
             if timer_min % 60 == 0:
                 timer_min = 0
                 timer_hour += 1
             timer_string = f'{timer_hour} часов, {timer_min} минут'
-            
+    
     except Exception as ex:
         print(ex)
+        sendTelegram('Что-то пошло не так! Работа завершена.')
     finally:
         driver.quit()
 
