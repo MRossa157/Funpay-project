@@ -25,8 +25,58 @@ def activating_order():
     time.sleep(1)
     print('Активировали товар')
 
+def raise_order(site, number_buttons, game):
+    driver.get(site)
+    if check_exist_by_css('.tc-item.warning') and game != 'Dota 2' and game != 'WoT':
+        activating_order()
+    driver.find_element_by_xpath("//button[contains(text(),'Поднять предложения')]").click()
+    if not check_exist_by_xpath("//div[@class='ajax-alert ajax-alert-danger']"):        
+        if game.find("Crossout") or game.find('War Thunder'):
+            try:
+                driver.find_element_by_xpath("//button[@class='btn btn-primary btn-block js-lot-raise-ex']").click()
+            except NoSuchElementException:
+                pass
+        print(f'{game}: Успешно поднят!')
 
 
+def main():
+    driver.implicitly_wait(2)
+    try:  
+        driver.get("https://funpay.ru/account/login")
+        print('Перешли на страницу логина')
+        for cookie in pickle.load(open("fp_cookies_new", "rb")):
+            driver.add_cookie(cookie)  
+        driver.refresh()
+        print('Залогинились')
+        timer_min = 0
+        timer_hour = 0
+        timer_string = '0 часов 0 минут'
+        while True:
+            print('Проверяем Crossout')
+            raise_order("https://funpay.ru/lots/213/trade",1,'Crossout [1/2]')
+            raise_order("https://funpay.ru/lots/214/trade",1,'Crossout [2/2]')
+            print('Проверяем War Thunder')
+            raise_order("https://funpay.ru/lots/244/trade",1,'War Thunder [1/2]')
+            raise_order("https://funpay.ru/lots/746/trade",1,'War Thunder [2/2]')
+            print('Проверяем Star Conflict')
+            raise_order("https://funpay.ru/lots/423/trade",1,'Star Conflict')
+            print(f'Ждём 10 минут (Всего работаем: {timer_string})')    
+            time.sleep(600)
+            timer_min += 10
+            if timer_min % 60 == 0:
+                timer_min = 0
+                timer_hour += 1
+            timer_string = f'{timer_hour} часов, {timer_min} минут'
+ 
+
+    
+    except Exception as ex:
+        print(ex)
+    finally:
+        driver.close()
+        driver.quit()
+
+###########START WEB DRIVER###########
 #options
 options = webdriver.ChromeOptions()
 
@@ -34,7 +84,7 @@ options = webdriver.ChromeOptions()
 options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36")
 
 #headless mode
-#options.add_argument("--headless")
+options.add_argument("--headless")
 
 #disable webdriver mode
 options.add_argument("--disable-blink-features=AutomationControlled")
@@ -43,69 +93,9 @@ options.add_argument("--disable-blink-features=AutomationControlled")
 options.add_experimental_option("useAutomationExtension", False)
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
 
-driver = webdriver.Chrome(options =options)
-driver.implicitly_wait(2)
+driver = webdriver.Chrome(options = options)
 
-try:  
-    driver.get("https://funpay.ru/account/login")
-    print('Перешли на страницу логина')
-    #for cookie in pickle.load(open("fp cookies", "rb")):
-        #driver.add_cookie(cookie)  
-    #driver.refresh()
-    #print('Залогинились')
-    
-    input('сохраняем?')
-    pickle.dump(driver.get_cookies(), open("fp_cookies_new", "wb"))
-    print('сохранили куки')
-    time.sleep(100000)
-    '''
-    timer_min = 0
-    timer_hour = 0
-    timer_string = '0 часов 0 минут'
-    while True:
-        print('Проверяем Crossout')
-        driver.get("https://funpay.ru/lots/214/trade")
-        if check_exist_by_css('.tc-item.warning'):
-            activating_order()
-        driver.find_element_by_xpath('//*[text()="Поднять предложения"]').click()
-        if not check_exist_by_xpath("//div[@class='ajax-alert ajax-alert-danger']"):
-            if check_exist_by_xpath("//div[@class='modal-dialog modal-sm']"):
-                driver.find_element_by_xpath("//label[contains(text(),'Предметы')]").click()
-                driver.find_element_by_xpath("//button[@class='btn btn-primary btn-block js-lot-raise-ex']").click()
-            print('Crossout: Успешно поднят!')
-        driver.get("https://funpay.ru/lots/244/trade")
-        print('Проверяем War Thunder')
-        if check_exist_by_css('.tc-item.warning'):
-            activating_order()
-        driver.find_element_by_xpath('//*[text()="Поднять предложения"]').click()
-        if not check_exist_by_xpath("//div[@class='ajax-alert ajax-alert-danger']"):
-            if check_exist_by_xpath("//div[@class='modal-dialog modal-sm']"):
-                driver.find_element_by_xpath("//label[contains(text(),'Бонус-коды')]").click()
-                time.sleep(2)
-                driver.find_element_by_xpath("//button[@class='btn btn-primary btn-block js-lot-raise-ex']").click()
-        if not check_exist_by_xpath("//div[@class='ajax-alert ajax-alert-danger']"):
-            print('War Thunder: Успешно поднят!')
-        driver.get("https://funpay.ru/lots/423/trade")
-        print('Проверяем Star Conflict')
-        if check_exist_by_css('.tc-item.warning'):
-            activating_order()
-        driver.find_element_by_xpath('//*[text()="Поднять предложения"]').click()
-        if not check_exist_by_xpath("//div[@class='ajax-alert ajax-alert-danger']"):
-            print('Star Conflict: Успешно поднят!')
-        print(f'Ждём 10 минут (Всего работаем: {timer_string})')    
-        time.sleep(600)
-        timer_min += 10
-        if timer_min % 60 == 0:
-            timer_min = 0
-            timer_hour += 1
-        timer_string = f'{timer_hour} часов, {timer_min} минут'
-     '''
+########################################
 
-    
-except Exception as ex:
-    print(ex)
-finally:
-    driver.close()
-    driver.quit()
-
-
+if __name__ == '__main__':
+    main()
